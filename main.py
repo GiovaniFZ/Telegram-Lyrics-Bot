@@ -19,14 +19,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
     await update.message.reply_html(
-        rf"Hi {user.mention_html()}, welcome to Lyrics bot!",
+        rf"Hi {user.mention_html()}, welcome to Lyrics bot! To search for lyrics, just send the song name and artist in the format: artist/song-name (e.g. coldplay/yellow).",
         reply_markup=ForceReply(selective=True),
     )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
-    await update.message.reply_text("Not available yet")
+    await update.message.reply_text("To search for lyrics, send the song name and artist in the format: artist/song-name (e.g. coldplay/yellow).")
 
 
 async def getLyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
