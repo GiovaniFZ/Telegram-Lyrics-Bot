@@ -38,7 +38,13 @@ async def getLyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         html_doc = response.text
         soup = BeautifulSoup(html_doc, 'html.parser')
         div_class = soup.find('div', class_='lyric-original')
-        await update.message.reply_text(div_class.text)
+        if div_class is not None:
+            lyrics_text = div_class.get_text(separator="\n", strip=True)
+            await update.message.reply_text(lyrics_text)
+        else:
+            await update.message.reply_text("Lyrics not found.")
+    else:
+        await update.message.reply_text("Error fetching lyrics.")
 
 
 def main() -> None:
