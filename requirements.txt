@@ -1,5 +1,4 @@
 python-dotenv
 python-telegram-bot
-watchfiles
 requests
 beautifulsoup4
