@@ -89,7 +89,10 @@ async def start_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             if "organic_results" in data and data["organic_results"]:
                 titles = [result.get("title", "No title") for result in data["organic_results"][:6]]
                 links = [result.get("link", "No link") for result in data["organic_results"][:6]]
-                keyboard = [[InlineKeyboardButton(title, callback_data=link)] for title, link in zip(titles, links)]
+                keyboard = [
+                    [InlineKeyboardButton(title, callback_data=link) for title, link in zip(titles[i:i + 2], links[i:i + 2])]
+                    for i in range(0, len(titles), 2)
+                ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await update.message.reply_text("Results found:", reply_markup=reply_markup)
             else:
