@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 ARTIST, SONG = range(2)
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /start is issued."""
     user = update.effective_user
@@ -87,12 +86,22 @@ async def start_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if response.status_code == 200:
             data = response.json()
             if "organic_results" in data and data["organic_results"]:
-                titles = [result.get("title", "No title") for result in data["organic_results"][:6]]
-                links = [result.get("link", "No link") for result in data["organic_results"][:6]]
-                keyboard = [
-                    [InlineKeyboardButton(title, callback_data=link) for title, link in zip(titles[i:i + 2], links[i:i + 2])]
-                    for i in range(0, len(titles), 2)
-                ]
+                top_results = data["organic_results"][:4]
+                keyboard = []
+                search_links = []
+
+                for result in top_results:
+                    title = result.get("title", "No title")
+                    link = result.get("link")
+                    callback_index = str(len(search_links))
+                    keyboard.append([InlineKeyboardButton(title, callback_data=callback_index)])
+                    search_links.append(link)
+
+                if not search_links:
+                    await update.message.reply_text("No valid lyric links were found for your query.")
+                    return
+
+                context.user_data["search_links"] = search_links
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 await update.message.reply_text("Results found:", reply_markup=reply_markup)
             else:
@@ -105,8 +114,22 @@ async def start_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         
 async def search_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    url = query.data
+    await query.answer()
+
+    search_links = context.user_data.get("search_links", [])
+    try:
+        chosenIndex = int(query.data)
+    except (TypeError, ValueError):
+        await query.edit_message_text("Invalid selection. Please run /search again.")
+        return
+
+    if chosenIndex < 0 or chosenIndex >= len(search_links):
+        await query.edit_message_text("This selection is no longer valid. Please run /search again.")
+        return
+
+    url = search_links[chosenIndex]
     lyrics = await get_lyrics_with_url(url)
+    context.user_data.pop("search_links", None)
     await query.edit_message_text(lyrics)
 
 
