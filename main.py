@@ -44,12 +44,13 @@ async def receive_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def receive_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Fetch and send the lyrics for the provided artist and song."""
+    loadingMsg = await update.message.reply_text("Loading, just a moment please...")
     artist_name = context.user_data.get("artist_name", "").strip()
     song_name = update.message.text.strip()
     url_base = "https://www.letras.mus.br/"
     full_url = f"{url_base}{artist_name}/{song_name}/"
     lyrics = await get_lyrics_with_url(full_url)
-    await update.message.reply_text(lyrics)
+    await loadingMsg.edit_text(lyrics)
     context.user_data.pop("artist_name", None)
     return ConversationHandler.END
 
@@ -79,6 +80,8 @@ async def start_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     
     query = " ".join(context.args)
     
+    loadingMsg = await update.message.reply_text("Loading, just a moment please...")
+    
     try:
         full_url = f"https://serpapi.com/search?engine=google&q=site:letras.mus.br+{query}"
         payload = {"api_key": os.getenv("SERPAPI_KEY")}
@@ -98,23 +101,24 @@ async def start_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                     search_links.append(link)
 
                 if not search_links:
-                    await update.message.reply_text("No valid lyric links were found for your query.")
+                    await loadingMsg.edit_text("No valid lyric links were found for your query.")
                     return
 
                 context.user_data["search_links"] = search_links
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                await update.message.reply_text("Results found:", reply_markup=reply_markup)
+                await loadingMsg.edit_text("Results found:", reply_markup=reply_markup)
             else:
-                await update.message.reply_text("No results found for your query.")
+                await loadingMsg.edit_text("No results found for your query.")
         else:
-            await update.message.reply_text("Error searching for lyrics. Please try again later.")
+            await loadingMsg.edit_text("Error searching for lyrics. Please try again later.")
     except Exception as e:
         logger.error(f"Search error: {e}")
-        await update.message.reply_text("An error occurred while searching. Please try again later.")
+        await loadingMsg.edit_text("An error occurred while searching. Please try again later.")
         
 async def search_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    await query.edit_message_text("Loading, just a moment please...")
 
     search_links = context.user_data.get("search_links", [])
     try:
