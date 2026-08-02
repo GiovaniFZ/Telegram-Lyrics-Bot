@@ -27,7 +27,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
-    await update.message.reply_text("Commands:\n/lyrics - Get lyrics for a specific song\n/search <query> - Search for lyrics using a query (e.g., artist or song name)\n/cancel - Cancel the current lyrics lookup. Use this command during a lyrics lookup conversation to stop the process.")
+    await update.message.reply_text(
+        "Commands:\n/lyrics - Get lyrics for a specific song\n"
+        "/search <query> - Search for lyrics using a query (e.g., artist or song name)\n"
+        "/cancel - Cancel a current operation. Use this command during a lyrics lookup conversation to stop the process.\n"
+        "/donation - Support the development of this bot\n\n"
+        )
 
 
 async def start_lyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
