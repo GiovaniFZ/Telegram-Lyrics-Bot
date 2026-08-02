@@ -141,14 +141,13 @@ async def search_button_handler(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data.pop("search_links", None)
     await query.edit_message_text(lyrics)
     
-async def donation_command(update: Update):
+async def donation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "*Any help is welcome to help in Song Lyrics Bot development! Here is how you can donate:*\n\n"
-        "• [Buy me a coffee](https://buymeacoffee.com/akaidk)\n\n"
-        "*• [Livepix](https://livepix.gg/akaidk)\n\n"
-        "*Cryptos*:\n"
-        f"*1. USDT/ETH*: ```{os.getenv("USDT_KEY")}```\n"
-        f"*2. BTC*: ```{os.getenv("BTC_KEY")}```\n\n"
+        "• [Buy me a coffee](https://buymeacoffee.com/akaidk)\n"
+        "• [Livepix](https://livepix.gg/akaidk)\n"
+        f"*• USDT/ETH*: `{os.getenv("USDT_KEY")}`\n"
+        f"*• BTC*: `{os.getenv("BTC_KEY")}`\n\n"
         "*For any other methods, please contact me at @akaidk.*"
         ,
         parse_mode="Markdown",
