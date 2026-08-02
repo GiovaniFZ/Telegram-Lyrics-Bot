@@ -28,7 +28,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message when the command /help is issued."""
     await update.message.reply_text(
-        "Commands:\n/lyrics - Get lyrics for a specific song\n"
+        "*Commands:*\n"
+        "/lyrics - Get lyrics for a specific song\n"
         "/search <query> - Search for lyrics using a query (e.g., artist or song name)\n"
         "/cancel - Cancel a current operation. Use this command during a lyrics lookup conversation to stop the process.\n"
         "/donation - Support the development of this bot\n\n"
@@ -155,6 +156,15 @@ async def donation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return
 
+async def source_code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "*The source code for SongLyricsBot is available on *"
+        "[Github](https://github.com/GiovaniFZ/Telegram-Lyrics-Bot).\n"
+        "Any contibutions are welcome! If you want to contribute, please fork the repository and submit a pull request.",
+        parse_mode="Markdown",
+        disable_web_page_preview=True
+    )
+
 
 def main() -> None:
     """Start the bot."""
@@ -165,6 +175,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("donation", donation_command))
+    application.add_handler(CommandHandler("source", source_code_command))
     application.add_handler(CommandHandler("search", start_search, filters=None))
     application.add_handler(CallbackQueryHandler(search_button_handler))
 
