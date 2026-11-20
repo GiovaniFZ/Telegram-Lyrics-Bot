@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from dotenv import load_dotenv
 import os
 import requests
@@ -6,6 +7,9 @@ from bs4 import BeautifulSoup
 
 from telegram import ForceReply, Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Application, CommandHandler, ConversationHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
+
+from adapters import TelegramBotService
+from services import BotService
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -16,48 +20,74 @@ logger = logging.getLogger(__name__)
 
 ARTIST, SONG = range(2)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+async def start(
+    bot_service: BotService,
+    update: Update,
+    _context: ContextTypes.DEFAULT_TYPE,
+) -> None:
     """Send a message when the command /start is issued."""
-    user = update.effective_user
-    await update.message.reply_html(
+    user = bot_service.get_user(update)
+    await bot_service.send_message(
+        update,
         rf"Hi {user.mention_html()}, welcome to Lyrics bot! Use /help to see how to get lyrics.",
+        parse_mode="HTML",
         reply_markup=ForceReply(selective=True),
     )
 
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def help_command(
+    bot_service: BotService,
+    update: Update,
+    _context: ContextTypes.DEFAULT_TYPE,
+) -> None:
     """Send a message when the command /help is issued."""
-    await update.message.reply_text(
+    await bot_service.send_message(
+        update,
         "*Commands:*\n"
         "/lyrics - Get lyrics for a specific song\n"
         "/search <query> - Search for lyrics using a query (e.g., artist or song name)\n"
         "/cancel - Cancel a current operation. Use this command during a lyrics lookup conversation to stop the process.\n"
         "/source - Get the source code\n"
-        "/donation - Support the development\n\n"
-        )
+        "/donation - Support the development\n\n",
+        parse_mode="Markdown"
+    )
 
 
-async def start_lyrics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Start a lyrics lookup conversation."""
-    await update.message.reply_text("Artist Name:")
+async def start_lyrics(
+    bot_service: BotService,
+    update: Update,
+    _context: ContextTypes.DEFAULT_TYPE,
+) -> int:
+    """Start a lyrics lookup conversation.""",
+
+    await bot_service.send_message(update, "Artist Name:")
     return ARTIST
 
 
-async def receive_artist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def receive_artist(
+    bot_service: BotService,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> int:
     """Store the artist and ask for the song name."""
     context.user_data["artist_name"] = update.message.text.strip()
-    await update.message.reply_text("Song Name:")
+    await bot_service.send_message(update, "Song Name:")
     return SONG
 
-async def receive_song(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def receive_song(
+    bot_service: BotService,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> int:
     """Fetch and send the lyrics for the provided artist and song."""
-    loadingMsg = await update.message.reply_text("Loading, just a moment please...")
+    loading_message = await bot_service.send_message(update, "Loading, just a moment please...")
     artist_name = context.user_data.get("artist_name", "").strip()
     song_name = update.message.text.strip()
     url_base = "https://www.letras.mus.br/"
     full_url = f"{url_base}{artist_name}/{song_name}/"
     lyrics = await get_lyrics_with_url(full_url)
-    await loadingMsg.edit_text(lyrics)
+    await bot_service.edit_message(loading_message, lyrics)
     context.user_data.pop("artist_name", None)
     return ConversationHandler.END
 
@@ -73,21 +103,29 @@ async def get_lyrics_with_url(full_url: str) -> str:
     return "Oops! The lyrics for this song was not found. Please check the artist and song name and try again."
 
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def cancel(
+    bot_service: BotService,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> int:
     """Cancel the current lyrics lookup."""
     context.user_data.pop("artist_name", None)
-    await update.message.reply_text("Lyrics search canceled.")
+    await bot_service.send_message(update, "Lyrics search canceled.")
     return ConversationHandler.END
 
-async def start_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start_search(
+    bot_service: BotService,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+) -> None:
     """Search for lyrics using the provided query."""
     if not context.args:
-        await update.message.reply_text("Usage: /search <query>\nExample: /search Coldplay")
+        await bot_service.send_message(update, "Usage: /search <query>\nExample: /search Coldplay")
         return
     
     query = " ".join(context.args)
     
-    loadingMsg = await update.message.reply_text("Loading, just a moment please...")
+    loading_message = await bot_service.send_message(update, "Loading, just a moment please...")
     
     try:
         full_url = f"https://serpapi.com/search?engine=google&q=site:letras.mus.br+{query}"
@@ -108,43 +146,55 @@ async def start_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                     search_links.append(link)
 
                 if not search_links:
-                    await loadingMsg.edit_text("No valid lyric links were found for your query.")
+                    await bot_service.edit_message(loading_message, "No valid lyric links were found for your query.")
                     return
 
                 context.user_data["search_links"] = search_links
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                await loadingMsg.edit_text("Results found:", reply_markup=reply_markup)
+                await bot_service.edit_message(loading_message, "Results found:", reply_markup=reply_markup)
             else:
-                await loadingMsg.edit_text("No results found for your query.")
+                await bot_service.edit_message(loading_message, "No results found for your query.")
         else:
-            await loadingMsg.edit_text("Error searching for lyrics. Please try again later.")
+            await bot_service.edit_message(loading_message, "Error searching for lyrics. Please try again later.")
     except Exception as e:
         logger.error(f"Search error: {e}")
-        await loadingMsg.edit_text("An error occurred while searching. Please try again later.")
+        await bot_service.edit_message(loading_message, "An error occurred while searching. Please try again later.")
         
-async def search_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def search_button_handler(
+    bot_service: BotService,
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("Loading, just a moment please...")
+    if query is None:
+        raise ValueError("The update does not contain a callback query.")
+
+    await bot_service.answer_callback_query(update)
+    await bot_service.edit_callback_message(update, "Loading, just a moment please...")
 
     search_links = context.user_data.get("search_links", [])
     try:
         chosenIndex = int(query.data)
     except (TypeError, ValueError):
-        await query.edit_message_text("Invalid selection. Please run /search again.")
+        await bot_service.edit_callback_message(update, "Invalid selection. Please run /search again.")
         return
 
     if chosenIndex < 0 or chosenIndex >= len(search_links):
-        await query.edit_message_text("This selection is no longer valid. Please run /search again.")
+        await bot_service.edit_callback_message(update, "This selection is no longer valid. Please run /search again.")
         return
 
     url = search_links[chosenIndex]
     lyrics = await get_lyrics_with_url(url)
     context.user_data.pop("search_links", None)
-    await query.edit_message_text(lyrics)
+    await bot_service.edit_callback_message(update, lyrics)
     
-async def donation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+async def donation_command(
+    bot_service: BotService,
+    update: Update,
+    _context: ContextTypes.DEFAULT_TYPE,
+):
+    await bot_service.send_message(
+        update,
         "*Any help is welcome to help in Song Lyrics Bot development! Here is how you can donate:*\n\n"
         "• [Buy me a coffee](https://buymeacoffee.com/akaidk)\n"
         "• [Livepix](https://livepix.gg/akaidk)\n"
@@ -157,8 +207,13 @@ async def donation_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return
 
-async def source_code_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+async def source_code_command(
+    bot_service: BotService,
+    update: Update,
+    _context: ContextTypes.DEFAULT_TYPE,
+):
+    await bot_service.send_message(
+        update,
         "*The source code for SongLyricsBot is available on *"
         "[Github](https://github.com/GiovaniFZ/Telegram-Lyrics-Bot).\n"
         "Any contibutions are welcome! If you want to contribute, please fork the repository and submit a pull request.",
@@ -172,21 +227,22 @@ def main() -> None:
     load_dotenv()
     bot_token = os.getenv("BOT_TOKEN")
     application = Application.builder().token(bot_token).build()
+    bot_service = TelegramBotService()
 
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("donation", donation_command))
-    application.add_handler(CommandHandler("source", source_code_command))
-    application.add_handler(CommandHandler("search", start_search, filters=None))
-    application.add_handler(CallbackQueryHandler(search_button_handler))
+    application.add_handler(CommandHandler("start", partial(start, bot_service)))
+    application.add_handler(CommandHandler("help", partial(help_command, bot_service)))
+    application.add_handler(CommandHandler("donation", partial(donation_command, bot_service)))
+    application.add_handler(CommandHandler("source", partial(source_code_command, bot_service)))
+    application.add_handler(CommandHandler("search", partial(start_search, bot_service), filters=None))
+    application.add_handler(CallbackQueryHandler(partial(search_button_handler, bot_service)))
 
     lyrics_conversation = ConversationHandler(
-        entry_points=[CommandHandler("lyrics", start_lyrics)],
+        entry_points=[CommandHandler("lyrics", partial(start_lyrics, bot_service))],
         states={
-            ARTIST: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_artist)],
-            SONG: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_song)],
+            ARTIST: [MessageHandler(filters.TEXT & ~filters.COMMAND, partial(receive_artist, bot_service))],
+            SONG: [MessageHandler(filters.TEXT & ~filters.COMMAND, partial(receive_song, bot_service))],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", partial(cancel, bot_service))],
     )
     
     application.add_handler(lyrics_conversation)
