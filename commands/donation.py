@@ -4,6 +4,7 @@ async def donation_command(
     bot_service: BotService,
     os_service: OSService,
     update,
+    _context,
 ):
     usdt_key = os_service.getEnv("USDT_KEY")
     btc_key = os_service.getEnv("BTC_KEY")

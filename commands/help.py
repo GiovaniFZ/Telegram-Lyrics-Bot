@@ -3,6 +3,7 @@ from services.bot_service import BotService
 async def help_command(
     bot_service: BotService,
     update,
+    _context,
 ) -> None:
     """Send a message when the command /help is issued."""
     await bot_service.send_message(

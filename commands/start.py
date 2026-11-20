@@ -1,6 +1,6 @@
 from services.bot_service import BotService, ReplyMarkup
 
-async def start(bot_service: BotService, update) -> None:
+async def start(bot_service: BotService, update, _context) -> None:
     """Send a message when the command /start is issued."""
     user = bot_service.get_user(update)
     await bot_service.send_message(
