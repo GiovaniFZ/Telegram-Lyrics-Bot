@@ -1,9 +1,18 @@
 from telegram import ForceReply, InlineKeyboardMarkup, Message, Update, User
 
-from services import BotService
-
+from services.bot_service import BotService, ReplyMarkup
 
 class TelegramBotService(BotService):
+    
+    def __get_telegram_reply_markup(self, reply_markup: ReplyMarkup | object | None):
+        if reply_markup == ReplyMarkup.FORCE_REPLY:
+            return ForceReply()
+        if reply_markup == ReplyMarkup.INLINE_KEYBOARD_MARKUP:
+            return InlineKeyboardMarkup([])
+        if isinstance(reply_markup, (ForceReply, InlineKeyboardMarkup)):
+            return reply_markup
+        return None
+    
     async def send_message(
         self,
         update: Update,
@@ -11,7 +20,7 @@ class TelegramBotService(BotService):
         *,
         parse_mode: str | None = None,
         disable_web_page_preview: bool | None = None,
-        reply_markup: ForceReply | InlineKeyboardMarkup | None = None,
+        reply_markup: ReplyMarkup | None = None,
     ) -> Message:
         message = update.effective_message
         if message is None:
@@ -21,7 +30,7 @@ class TelegramBotService(BotService):
             msg,
             parse_mode=parse_mode,
             disable_web_page_preview=disable_web_page_preview,
-            reply_markup=reply_markup,
+            reply_markup=self.__get_telegram_reply_markup(reply_markup),
         )
 
     async def edit_message(
@@ -29,9 +38,9 @@ class TelegramBotService(BotService):
         message: Message,
         msg: str,
         *,
-        reply_markup: InlineKeyboardMarkup | None = None,
+        reply_markup: ReplyMarkup | InlineKeyboardMarkup | None = None,
     ) -> Message | bool:
-        return await message.edit_text(msg, reply_markup=reply_markup)
+        return await message.edit_text(msg, reply_markup=self.__get_telegram_reply_markup(reply_markup))
 
     async def edit_callback_message(self, update: Update, msg: str) -> Message | bool:
         query = update.callback_query
