@@ -1,4 +1,4 @@
-from telegram import ForceReply, InlineKeyboardMarkup, Message, Update, User
+from telegram import ForceReply, InlineKeyboardMarkup, Message, Update, User, InlineKeyboardButton
 
 from services.bot_service import BotService, ReplyMarkup
 
@@ -55,6 +55,12 @@ class TelegramBotService(BotService):
             raise ValueError("The update does not contain a callback query.")
 
         return await query.answer()
+    
+    def get_inline_markup(self, keyboard: list) -> None:
+        return InlineKeyboardMarkup(keyboard)
+    
+    def get_inline_keyboard_button(self, btn_title: str, callback_data: str | object | None) -> None:
+        return InlineKeyboardButton(btn_title, callback_data=callback_data)
 
     def get_user(self, update: Update) -> User:
         user = update.effective_user

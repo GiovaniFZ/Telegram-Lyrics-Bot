@@ -35,6 +35,14 @@ class BotService(ABC):
     @abstractmethod
     async def answer_callback_query(self, update) -> bool:
         pass
+    
+    @abstractmethod
+    def get_inline_markup(self, keyboard: list) -> None:
+        pass
+    
+    @abstractmethod
+    def get_inline_keyboard_button(self, btn_title: str, callback_data: str | object | None) -> None:
+        pass
 
     @abstractmethod
     def get_user(self, update):

@@ -1,9 +1,7 @@
 import logging
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from services import OSService, Requester
+from services import BotService, Requester
 
 from commands.lyrics_lookup.fetch_lyrics import get_lyrics_with_url
-from services.bot_service import BotService
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +37,7 @@ async def start_search(
                     loading_message,
                     "Error searching for lyrics. Please try again later.",
                 )
+                print(response.json())
                 return
 
             data = response.json()
@@ -58,7 +57,7 @@ async def start_search(
         
                 callback_index = str(len(callbacks))
                 keyboard.append(
-                    [InlineKeyboardButton(btn_title, callback_data=callback_index)]
+                    [bot_service.get_inline_keyboard_button(btn_title, callback_data=callback_index)]
                 )
                 callbacks.append({
                     "artist": artist,
@@ -66,7 +65,7 @@ async def start_search(
                 })
 
             context.user_data["callbacks"] = callbacks
-            reply_markup = InlineKeyboardMarkup(keyboard)
+            reply_markup = bot_service.get_inline_markup(keyboard)
             await bot_service.edit_message(
                 loading_message,
                 "Results found:",
