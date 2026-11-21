@@ -80,6 +80,22 @@ Edit `.env`, then run:
 Open your bot in Telegram, send `/start`, then use `/lyrics` and follow the
 prompts.
 
+## Tests
+
+Install the development dependencies and run the tests with Python 3.14 or
+newer:
+
+```powershell
+uv sync
+uv run pytest
+```
+
+Tests can use `MockBotService` from `adapters.mock_bot_service` to exercise
+commands without contacting Telegram. Its `messages`, `edited_messages`,
+`callback_messages`, and `answered_callbacks` attributes record interactions.
+`sent_messages["msg"]` and `parse_modes["parse_mode"]` contain the latest sent
+message and its parse mode.
+
 ## Run with Docker
 
 After configuring `.env`, build and start the container:

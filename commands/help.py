@@ -9,7 +9,7 @@ async def help_command(
     await bot_service.send_message(
         update,
         "*Commands:*\n"
-        "/lyrics - Get lyrics for a specific song\n"
+    "/lyrics - Get lyrics for a specific song\n"
         "/search <query> - Search for lyrics using a query (e.g., artist or song name)\n"
         "/cancel - Cancel a current operation. Use this command during a lyrics lookup conversation to stop the process.\n"
         "/source - Get the source code\n"
