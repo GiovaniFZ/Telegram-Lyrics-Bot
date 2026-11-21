@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 async def start_search(
     bot_service: BotService,
-    os_service: OSService,
     requester: Requester,
     update,
     context,
@@ -28,16 +27,12 @@ async def start_search(
         update, "Loading, just a moment please..."
     )
     
-    is_available = False
+    is_available = True
 
     if (is_available):
         try:
-            full_url = (
-                "https://serpapi.com/search"
-                f"?engine=google&q=site:letras.mus.br+{query}"
-            )
-            payload = {"api_key": os_service.getEnv("SERPAPI_KEY")}
-            response = requester.request(full_url, json=payload)
+            full_url = f"https://test-0k.onrender.com/suggestion?q={query}&limit=4"
+            response = requester.request(full_url)
 
             if response.status_code != 200:
                 await bot_service.edit_message(
@@ -47,7 +42,7 @@ async def start_search(
                 return
 
             data = response.json()
-            organic_results = data.get("organic_results", [])
+            organic_results = data.get("results", [])
             if not organic_results:
                 await bot_service.edit_message(
                     loading_message, "No results found for your query."
@@ -55,27 +50,22 @@ async def start_search(
                 return
 
             keyboard = []
-            search_links = []
+            callbacks = []
             for result in organic_results[:4]:
                 title = result.get("title", "No title")
-                link = result.get("link")
-                if not link:
-                    continue
-
-                callback_index = str(len(search_links))
+                artist = result.get("artist")
+                btn_title = f"{artist} - {title}"
+        
+                callback_index = str(len(callbacks))
                 keyboard.append(
-                    [InlineKeyboardButton(title, callback_data=callback_index)]
+                    [InlineKeyboardButton(btn_title, callback_data=callback_index)]
                 )
-                search_links.append(link)
+                callbacks.append({
+                    "artist": artist,
+                    "title": title
+                })
 
-            if not search_links:
-                await bot_service.edit_message(
-                    loading_message,
-                    "No valid lyric links were found for your query.",
-                )
-                return
-
-            context.user_data["search_links"] = search_links
+            context.user_data["callbacks"] = callbacks
             reply_markup = InlineKeyboardMarkup(keyboard)
             await bot_service.edit_message(
                 loading_message,
@@ -107,7 +97,7 @@ async def search_button_handler(
         update, "Loading, just a moment please..."
     )
 
-    search_links = context.user_data.get("search_links", [])
+    callbacks: list = context.user_data.get("callbacks", [])
     try:
         chosen_index = int(query.data)
     except (TypeError, ValueError):
@@ -116,14 +106,10 @@ async def search_button_handler(
         )
         return
 
-    if chosen_index < 0 or chosen_index >= len(search_links):
-        await bot_service.edit_callback_message(
-            update,
-            "This selection is no longer valid. Please run /search again.",
-        )
-        return
-
-    url = search_links[chosen_index]
-    lyrics = await get_lyrics_with_url(requester, url)
-    context.user_data.pop("search_links", None)
+    chosen_data = callbacks[chosen_index]
+    chosen_artist = chosen_data.get("artist")
+    chosen_song = chosen_data.get("title")
+    full_url = f"https://test-0k.onrender.com/lyrics/?artist={chosen_artist}&song={chosen_song}/"
+    lyrics = await get_lyrics_with_url(requester, full_url)
+    context.user_data.pop("callbacks", None)
     await bot_service.edit_callback_message(update, lyrics)

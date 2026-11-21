@@ -46,7 +46,7 @@ def main() -> None:
     application.add_handler(
         CommandHandler(
             "search",
-            partial(start_search, bot_service, os_service, requester),
+            partial(start_search, bot_service, requester),
             filters=None,
         )
     )
